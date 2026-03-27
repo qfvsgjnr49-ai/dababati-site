@@ -15,8 +15,17 @@ export default function DababatiTracker() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [pin, setPin] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminAccess, setShowAdminAccess] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
   const [noteInput, setNoteInput] = useState("");
+
+  useEffect(() => {
+    const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+    if (search?.get("admin") === "true" || pathname === "/admin") {
+      setShowAdminAccess(true);
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -75,7 +84,7 @@ export default function DababatiTracker() {
   };
 
   const login = () => {
-    if (pin === "1029384756") {
+    if (pin === "1234") {
       setIsAdmin(true);
       setPin("");
     } else {
@@ -383,34 +392,50 @@ export default function DababatiTracker() {
         </div>
       )}
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          background: "#ffffff",
-          border: "1px solid #dddddd",
-          borderRadius: "14px",
-          padding: "12px",
-          boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
-        }}
-      >
-        {!isAdmin ? (
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <input
-              type="password"
-              placeholder="admin pin"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              style={{
-                padding: "10px 12px",
-                fontSize: "16px",
-                border: "1px solid #cccccc",
-                borderRadius: "10px",
-              }}
-            />
+      {showAdminAccess ? (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            background: "#ffffff",
+            border: "1px solid #dddddd",
+            borderRadius: "14px",
+            padding: "12px",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+          }}
+        >
+          {!isAdmin ? (
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="password"
+                placeholder="admin pin"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                style={{
+                  padding: "10px 12px",
+                  fontSize: "16px",
+                  border: "1px solid #cccccc",
+                  borderRadius: "10px",
+                }}
+              />
+              <button
+                onClick={login}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: "10px",
+                  border: "1px solid #cccccc",
+                  background: "#111111",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                }}
+              >
+                login
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={login}
+              onClick={() => setIsAdmin(false)}
               style={{
                 padding: "10px 16px",
                 borderRadius: "10px",
@@ -420,25 +445,11 @@ export default function DababatiTracker() {
                 cursor: "pointer",
               }}
             >
-              login
+              logout
             </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setIsAdmin(false)}
-            style={{
-              padding: "10px 16px",
-              borderRadius: "10px",
-              border: "1px solid #cccccc",
-              background: "#111111",
-              color: "#ffffff",
-              cursor: "pointer",
-            }}
-          >
-            logout
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

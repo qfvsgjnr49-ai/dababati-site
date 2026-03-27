@@ -1,16 +1,25 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-type HistoryMap = Record<string, number>;
+type DatesMap = Record<string, number>;
 type NotesMap = Record<string, string>;
 
+type TrackerDoc = {
+  count?: number;
+  dates?: DatesMap;
+  notes?: string | NotesMap;
+};
+
+const trackerRef = doc(db, "tracker", "main");
+
 export default function DababatiTracker() {
-  const STORAGE_KEY = "dababati-tracker-v3";
   const today = new Date().toISOString().split("T")[0];
 
   const [count, setCount] = useState(0);
-  const [history, setHistory] = useState<HistoryMap>({});
+  const [history, setHistory] = useState<DatesMap>({});
   const [notes, setNotes] = useState<NotesMap>({});
   const [showCalendar, setShowCalendar] = useState(false);
   const [pin, setPin] = useState("");
@@ -18,6 +27,7 @@ export default function DababatiTracker() {
   const [showAdminAccess, setShowAdminAccess] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
   const [noteInput, setNoteInput] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -28,59 +38,62 @@ export default function DababatiTracker() {
   }, []);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) {
-        return;
+    const unsubscribe = onSnapshot(
+      trackerRef,
+      (snapshot) => {
+        const data = (snapshot.data() as TrackerDoc | undefined) ?? {};
+        const nextHistory = data.dates ?? {};
+        const nextNotes =
+          typeof data.notes === "string" ? {} : (data.notes ?? {});
+
+        setHistory(nextHistory);
+        setNotes(nextNotes);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Failed to load Firebase data", error);
+        setLoading(false);
       }
-
-      const parsed = JSON.parse(saved) as {
-        history?: HistoryMap;
-        notes?: NotesMap;
-      };
-
-      const savedHistory = parsed.history ?? {};
-      const savedNotes = parsed.notes ?? {};
-
-      setHistory(savedHistory);
-      setNotes(savedNotes);
-      setCount(savedHistory[today] ?? 0);
-      setNoteInput(savedNotes[today] ?? "");
-    } catch (error) {
-      console.error("Failed to load tracker data", error);
-    }
-  }, [today]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        history,
-        notes,
-      })
     );
-  }, [history, notes]);
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     setCount(history[selectedDate] ?? 0);
     setNoteInput(notes[selectedDate] ?? "");
   }, [selectedDate, history, notes]);
 
-  const saveForDate = (date: string, value: number) => {
+  const saveDocument = async (nextHistory: DatesMap, nextNotes: NotesMap) => {
+    await setDoc(trackerRef, {
+      count: nextHistory[selectedDate] ?? 0,
+      dates: nextHistory,
+      notes: nextNotes,
+    });
+  };
+
+  const saveForDate = async (date: string, value: number) => {
     const safeValue = Math.max(0, value);
-    setHistory((prev) => ({
-      ...prev,
+    const nextHistory = {
+      ...history,
       [date]: safeValue,
-    }));
+    };
+
+    setHistory(nextHistory);
     setCount(safeValue);
+    await setDoc(trackerRef, {
+      count: safeValue,
+      dates: nextHistory,
+      notes,
+    });
   };
 
-  const increment = () => {
-    saveForDate(selectedDate, count + 1);
+  const increment = async () => {
+    await saveForDate(selectedDate, count + 1);
   };
 
-  const decrement = () => {
-    saveForDate(selectedDate, count - 1);
+  const decrement = async () => {
+    await saveForDate(selectedDate, count - 1);
   };
 
   const login = () => {
@@ -92,11 +105,14 @@ export default function DababatiTracker() {
     }
   };
 
-  const saveNote = () => {
-    setNotes((prev) => ({
-      ...prev,
+  const saveNote = async () => {
+    const nextNotes = {
+      ...notes,
       [selectedDate]: noteInput,
-    }));
+    };
+
+    setNotes(nextNotes);
+    await saveDocument(history, nextNotes);
   };
 
   const sortedHistory = useMemo(() => {
@@ -213,7 +229,7 @@ export default function DababatiTracker() {
                 lineHeight: 1,
               }}
             >
-              {count}
+              {loading ? "..." : count}
             </div>
 
             <div
@@ -464,26 +480,4 @@ export default function DababatiTracker() {
       ) : null}
     </div>
   );
-}
-
-export function runTrackerSmokeTests(): boolean {
-  const sampleHistory: HistoryMap = {
-    "2026-03-20": 3,
-    "2026-03-21": 0,
-    "2026-03-22": 14,
-  };
-
-  if (sampleHistory["2026-03-20"] !== 3) {
-    throw new Error("History value test failed");
-  }
-
-  if (Math.max(0, -5) !== 0) {
-    throw new Error("Count clamp test failed");
-  }
-
-  if (Object.keys(sampleHistory).length !== 3) {
-    throw new Error("History length test failed");
-  }
-
-  return true;
 }

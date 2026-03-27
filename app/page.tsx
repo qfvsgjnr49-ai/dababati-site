@@ -20,9 +20,9 @@ export default function DababatiTracker() {
   const [noteInput, setNoteInput] = useState("");
 
   useEffect(() => {
-    const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    const pathname = typeof window !== "undefined" ? window.location.pathname : "";
-    if (search?.get("admin") === "true" || pathname === "/admin") {
+    if (typeof window === "undefined") return;
+    const search = new URLSearchParams(window.location.search);
+    if (search.get("admin") === "true") {
       setShowAdminAccess(true);
     }
   }, []);
@@ -120,7 +120,7 @@ export default function DababatiTracker() {
       >
         {Array.from({ length: value }).map((_, index) => (
           <img
-            key={index}
+            key={`${value}-${index}`}
             src="/tank.png"
             alt="tank"
             style={{
@@ -156,7 +156,7 @@ export default function DababatiTracker() {
           padding: "24px 32px",
           borderBottom: "1px solid #e5e5e5",
           background: "#ffffff",
-          color: "#111111"
+          color: "#111111",
         }}
       >
         <h1 style={{ fontSize: "42px", margin: 0, color: "#111111" }}>Dababati</h1>
@@ -348,47 +348,59 @@ export default function DababatiTracker() {
                 Save note
               </button>
             ) : (
-              <div style={{ marginTop: "12px", color: "#777777", fontSize: "14px" }}>Only admin can edit notes</div>
+              <div style={{ marginTop: "12px", color: "#777777", fontSize: "14px" }}>
+                Only admin can edit notes
+              </div>
             )}
           </div>
         </div>
       ) : (
-        <div style={{ padding: "40px", color: "#111111" }}>
-          <h2 style={{ fontSize: "34px", marginBottom: "24px" }}>Calendar</h2>
+        <div style={{ padding: "40px" }}>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.98)",
+              borderRadius: "20px",
+              padding: "28px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.16)",
+              border: "1px solid #dddddd",
+            }}
+          >
+            <h2 style={{ fontSize: "34px", marginBottom: "24px", color: "#111111" }}>Calendar</h2>
 
-          {sortedHistory.length === 0 ? (
-            <p style={{ fontSize: "20px", color: "#666666" }}>No saved dates yet.</p>
-          ) : (
-            sortedHistory.map(([date, value]) => (
-              <div
-                key={date}
-                style={{
-                  marginBottom: "12px",
-                  fontSize: "22px",
-                  padding: "14px 18px",
-                  border: "1px solid #dddddd",
-                  borderRadius: "12px",
-                  background: "#fafafa",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "16px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 700, color: "#111111" }}>{date}</div>
-                  <div style={{ color: "#555555", marginTop: "4px" }}>Count: {value}</div>
-                  {notes[date] ? (
-                    <div style={{ color: "#666666", marginTop: "6px", fontSize: "15px" }}>
-                      Note: {notes[date]}
-                    </div>
-                  ) : null}
+            {sortedHistory.length === 0 ? (
+              <p style={{ fontSize: "20px", color: "#666666" }}>No saved dates yet.</p>
+            ) : (
+              sortedHistory.map(([date, value]) => (
+                <div
+                  key={date}
+                  style={{
+                    marginBottom: "12px",
+                    fontSize: "22px",
+                    padding: "14px 18px",
+                    border: "1px solid #dddddd",
+                    borderRadius: "12px",
+                    background: "#ffffff",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "16px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#111111" }}>{date}</div>
+                    <div style={{ color: "#555555", marginTop: "4px" }}>Count: {value}</div>
+                    {notes[date] ? (
+                      <div style={{ color: "#666666", marginTop: "6px", fontSize: "15px" }}>
+                        Note: {notes[date]}
+                      </div>
+                    ) : null}
+                  </div>
+                  {renderTankIcons(value)}
                 </div>
-                {renderTankIcons(value)}
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
       )}
 
